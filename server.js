@@ -46,7 +46,8 @@ app.post('/api/capture', async (req, res) => {
     console.log('Location:', location?.lat, location?.lng);
     console.log('Selfie URL:', selfieUrl);
 
-    res.json({ success: true, selfieUrl });
+    const mapUrl = location ? `https://www.google.com/maps?q=${location.lat},${location.lng}` : null;
+    res.json({ success: true, selfieUrl, mapUrl });
   } catch (err) {
     console.error('Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
