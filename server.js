@@ -6,7 +6,7 @@ app.use(express.json({ limit: '10mb' })); // Allow larger selfie data
 
 // Allow requests from your GitHub Pages (replace with your URL!)
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://YOUR-USERNAME.github.io');
+  res.header('Access-Control-Allow-Origin', 'https://eazyshaw191-web.github.io');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('Access-Control-Allow-Methods', 'POST');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
